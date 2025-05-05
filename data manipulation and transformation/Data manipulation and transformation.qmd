@@ -1,0 +1,419 @@
+---
+title: "Data transformation and manipulation"
+author: "Saar Alon-Barkat"
+date: "May 2024"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+
+
+
+Importing Libraries
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+
+
+In this session, we will practice data transformation and data manipulation techniques which are extremely important for working with data. In fact, in most data projects, most of your time will be spent on this.  
+
+
+We will divide the techniques to 4 different categories: 
+
+1. Organizing the dataset
+
+2. Transforming variables
+
+3. Aggregating the data
+
+4. Combining/merging different datasets
+
+
+We will also learn how to "reshape" the data (from long to wide and vice versa). 
+
+
+
+We will work mainly with the localities dataset, already available in the shared dropbox. This dataset is based on the local authorities dataset published by the CBS. 
+
+```{r}
+#You can download and import, but here I also show you how you can download it directly from the web!
+
+localities_2022 <- read_csv("https://www.dropbox.com/scl/fi/io3s84jk1mftpv9xnr2yf/localities_2022.csv?rlkey=xj42l8thfpmrm93l02wao8s69&st=72vb8hix&dl=1")
+```
+
+```{r}
+localities_2022 %>% glimpse()
+```
+
+
+Before starting - a general comment is needed about working with datasets as objects in R. In R, every table is an object (called "dataframe"), which can be saved in the working environment. When you make transformations to your data, you can do one of three things: 
+
+(a) Printing the results without saving it. This is handy if you don't think you will conduct additional analyses on the table, and you just want to view it. (Usually this is what we will do with `arrange` and `select`).
+
+(b) Saving the results as a new object, assigned with a new name. This is handy if you will want to continue using the previous table without the changes.(Usually this is what we will do with `filter`, and `left_join`).
+
+(c) Overriding the existing table. Saving the results as the existing table, using the same name. This is handy if you do not think you will use the previous table. (Usually this is what we will do with `mutate`).
+
+
+
+# 1. Organizing the data
+
+
+## Selecting columns with `select`
+
+```{r}
+localities_2022 %>% 
+  select(name,
+         population,
+         income) %>% 
+  head() # this prints only first raws
+```
+
+
+Remember, you can also save it to a new dataset and give it a new name. 
+```{r}
+localities_2022_short <- localities_2022 %>% 
+  select(name,
+         population,
+         income)
+```
+
+
+You can also "unselect" columns with "-":
+
+```{r}
+localities_2022 %>% 
+  select(-cancer_men,
+         -cancer_women) %>% 
+  head()
+```
+
+
+
+## Filtering raws with `filter`
+
+Here are a few examples, using different logical operators:
+```{r}
+localities_2022 %>% 
+  filter(district_eng=="Haifa")
+
+localities_2022 %>% 
+  filter(district_eng!="Haifa") 
+
+localities_2022 %>% 
+  filter(distance_tlv>50)
+
+localities_2022 %>% 
+  filter(distance_tlv<50)
+
+
+localities_2022 %>% 
+  filter(district_eng=="Haifa" & distance_tlv<50) # '&' = and
+
+localities_2022 %>% 
+  filter(district_eng=="Haifa" | distance_tlv<50) # `|`= or
+```
+
+
+
+## Arranging raws with `arrange`
+
+```{r}
+localities_2022 %>% 
+  arrange(distance_tlv)
+
+localities_2022 %>% 
+  arrange(distance_tlv %>% desc())
+
+localities_2022 %>% 
+  arrange(rank)
+
+localities_2022 %>% 
+  arrange(rank,
+          distance_tlv)
+```
+
+At the end of this document we return to two extra functions for organizing the data: reshaping/pivoting (`pivot_wider` and `pivot_longer`). 
+
+
+
+# 2. Transforming variables (with `mutate`)
+
+With `mutate` we can create new variables or override existing variables. 
+
+The code will be usually: 
+`data %>% mutate(new_var = ...)`
+
+For example - let's create a `year` variable that will receive 2022 for all raws. Let's save it into the dataset (override).  
+
+```{r}
+localities_2022 <- localities_2022 %>% 
+mutate(year = 2022)
+```
+
+
+## Recoding categorical variables with `recode`
+
+```{r}
+
+localities_2022 <- localities_2022 %>% 
+  mutate(new_district = district_eng %>%
+           recode(Haifa="North",
+                  `Tel Aviv` = "Center"))
+  
+localities_2022 %>% count(new_district)
+```
+
+```{r}
+
+localities_2022 <- localities_2022 %>% 
+  mutate(new_rank = rank %>%
+           recode(`1`="Low",
+                  `2`="Low",
+                  `3`="Low",
+                  `4`="Medium",
+                  `5`="Medium",
+                  `6`="Medium",
+                  `7`="Medium",
+                  `8`="High",
+                  `9`="High",
+                  `10`="High"))
+  
+localities_2022 %>% count(rank,new_rank)
+```
+
+
+## Transforming variables based on logical rules with `case_when`
+
+`case_when` allows us to transform not only categorical variables but also numeric variables. 
+```{r}
+localities_2022 <- localities_2022 %>% 
+  mutate(arab_locality_1 = case_when(
+    percent_arab==100 ~ "Arab",
+    percent_arab==0 ~ "Jewish",
+    TRUE ~ "Mixed"
+  )
+  )
+
+localities_2022 %>% count(arab_locality_1)
+```
+
+```{r}
+localities_2022 <- localities_2022 %>% 
+  mutate(arab_locality_2 = case_when(
+    percent_arab>=90 ~ "Arab",
+    percent_arab<=10 ~ "Jewish",
+    TRUE ~ "Mixed"
+  )
+  )
+
+localities_2022 %>% count(arab_locality_2)
+```
+
+
+
+## Transforming variables based on formula
+
+This can be very useful for many purposes. 
+
+Example 1: we want to add a new obesity measure that is the delta between 2022 and 2021 elections turnout:
+```{r}
+localities_2022 <- localities_2022 %>% 
+  mutate(turnout_increase_2022_2021 = (voting_rate_knesset_2022 - voting_rate_knesset_2021))
+
+localities_2022 %>% 
+  select(name,
+         turnout_increase_2022_2021,
+         voting_rate_knesset_2022,
+         voting_rate_knesset_2021) %>% 
+  arrange(turnout_increase_2022_2021 %>% desc())
+
+localities_2022 %>% 
+  ggplot(aes(turnout_increase_2022_2021))+
+  geom_histogram()
+```
+
+
+
+
+# 3. Aggregating the data (with `group_by` and `summarize`)
+
+Often we want to aggregate/group/cluster to a higher level. 
+
+For this, we can use `group_by` and `summarise`.
+The code will be usually: 
+`data %>% group_by(group_var) %>%  summarize(...)`
+
+For example, let's aggregate the data at the district level. 
+
+```{r}
+localities_2022 %>% 
+  group_by(district_eng) %>% 
+  summarise(sum(population),
+            mean(voting_rate_knesset_2022),
+            mean(income),
+            median(rank),
+            max(rank),
+            mean(teacher_student_ratio,na.rm = T))
+```
+
+
+# 4. Combining/merging with a different dataset
+
+## Combining with another dataset (with `bind_raws`)
+
+Say our data was split to three tables: cities, local municipalities and regional councils. All tables have the same columns/variables. 
+```{r}
+municipality <- localities_2022 %>% 
+  filter(type_eng=="municipality")
+
+local_municipality <- localities_2022 %>% 
+  filter(type_eng=="local municipality")
+
+regional_council <- localities_2022 %>% 
+  filter(type_eng=="regional council")
+```
+
+Now, we want to combine them into one table. We use `bind_raws` to put the tables one below each other.
+
+```{r}
+municipality %>% 
+  bind_rows(local_municipality) %>% 
+  bind_rows(regional_council)
+```
+
+
+## Mergning with another dataset (with `join`)
+
+Say found another information on our cases in another dataset, and we want to merge the two together. This can be tricky if the raws are not arranged exactly in the same order.
+
+For this challenge, we have `join` functions: 
+
+For example, let's merge the localities data with another dataset by the CBS on specific settlements (not localities). 
+```{r}
+yeshuvim_2020 <- read_csv("https://www.dropbox.com/s/2om27wotvw9i1x3/yeshuvim_cbs_2020.csv?dl=1")
+```
+
+
+```{r}
+elections_2022 <- read_csv("https://www.dropbox.com/scl/fi/xwl1csshdld6s2hfy6bst/election_results_2022.csv?rlkey=d0dri3sbzc2tehf8o7z3yiyc1&st=4n1m1but&dl=1") 
+
+elections_2022 <- elections_2022 %>% janitor::clean_names()
+
+elections_2022 %>% glimpse()
+```
+
+```{r}
+new_dataset <- localities_2022 %>% 
+  filter(type_eng!="regional council") %>% 
+  left_join(elections_2022, 
+            by = c("symbol" = "sml_yswb"))
+```
+
+```{r}
+new_dataset <- new_dataset %>% 
+  mutate(likud_percent = mhl/ksrym)
+
+new_dataset %>% 
+  ggplot(aes(x=likud_percent))+
+  geom_histogram()
+
+new_dataset %>% 
+  ggplot(aes(x=rank,y=likud_percent))+
+  geom_point()
+```
+
+
+# Reshaping data (long and wide forms)
+
+```{r}
+t1 <- localities_2022 %>% 
+  drop_na(name_eng) %>% 
+  select(name_eng,
+         voting_rate_knesset_2022,
+         voting_rate_municipalities_2018)
+
+
+```
+
+From wide to long ("pivot"):
+```{r}
+t1_longer <- t1 %>% 
+pivot_longer(cols=voting_rate_knesset_2022:voting_rate_municipalities_2018,
+             names_to = "election",
+             values_to = "turnout")
+```
+
+```{r}
+t1_longer %>% 
+  group_by(election) %>% 
+  summarise(mean_turnout = mean(turnout,na.rm = T))
+
+
+
+t1_longer %>% 
+  ggplot(aes(x=election,y=turnout))+
+  geom_boxplot()
+
+
+t1_longer %>% 
+  ggplot(aes(x=election,y=turnout))+
+  geom_point(alpha=0.5)+
+  geom_line(aes(group=name_eng),alpha=0.5)
+
+```
+
+
+
+What can explain this... Where is the voting turnout for local elections higher than national elections. Any guess??   
+
+```{r}
+t2 <- localities_2022 %>% 
+  drop_na(name_eng) %>% 
+  select(name_eng,
+         voting_rate_knesset_2022,
+         voting_rate_municipalities_2018,
+         arab_locality_2)
+
+
+t2_longer <- t2 %>% 
+pivot_longer(cols=voting_rate_knesset_2022:voting_rate_municipalities_2018,
+             names_to = "election",
+             values_to = "turnout")
+
+
+t2_longer %>% 
+  ggplot(aes(x=election,y=turnout,color=arab_locality_2))+
+  geom_point(alpha=0.5)+
+  geom_line(aes(group=name_eng),alpha=0.5)
+```
+
+```{r}
+t2_longer %>% 
+  ggplot(aes(x=election,y=turnout,color=arab_locality_2))+
+  geom_boxplot()
+
+```
+
+
+
+From long to wide ("unpivot"):
+```{r}
+t1_wider <- t1_longer %>% 
+pivot_wider(names_from = election,
+            values_from = turnout)
+```
+
+
+
+

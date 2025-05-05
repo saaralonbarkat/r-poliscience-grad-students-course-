@@ -1,0 +1,405 @@
+---
+title: "Data report - Gapminder dataset"
+author: "Saar Alon-Barkat"
+date: "March 2024"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+
+Last update: `r Sys.time()`
+
+
+```{r}
+library(tidyverse)
+library(gapminder)
+library(gt)
+library(gtsummary)
+library(ggrepel)  
+library(plotly)
+library(sjPlot)
+```
+
+
+
+This report uses the Gapminder dataset, which includes real-world country-level panel data (1952-2007) for: 
+
+* Life expectancy (`lifeExp`)
+
+* Population size (`pop`)
+
+* GDP percapita (`gdpPercap`)
+
+The dataset is available from `gapminder` `r` package. For more information on gapminder see: https://www.gapminder.org/ 
+
+
+
+```{r}
+gapminder %>% 
+  glimpse()
+```
+
+<br>
+
+The following table summarizes the main variables across the years. 
+
+```{r}
+gapminder %>% 
+  select(-country) %>% 
+  tbl_summary(by = year)
+
+```
+
+
+# Life expectancy
+
+
+```{r}
+gapminder %>% 
+      ggplot(aes(x=factor(year), y=lifeExp)) +
+  geom_boxplot()+
+stat_summary(fun.y = "mean", geom = "point",color="lightblue",size=3)+
+  theme_classic() +
+  labs(title = "Life expectancy increase over time",
+       x = "",
+       y = "Country life expectancy",
+       caption = "Source:Gapminder") 
+```
+
+```{r}
+gapminder %>% 
+  filter(year == 2007) %>% 
+      ggplot(aes(x=lifeExp)) +
+  geom_histogram(bins=12,fill="lightblue",color="white")+
+  theme_classic() +
+  guides(color = FALSE) +
+  labs(title = "Life expectancy variation in 2007",
+       x = "Country life expectancy",
+       y = "Frequency",
+       caption = "Source:Gapminder") 
+  
+```
+```{r}
+gapminder %>% 
+      ggplot(aes(x=lifeExp)) +
+  geom_histogram(bins=12,fill="lightblue",color="white")+
+  theme_classic() +
+  facet_wrap(vars(year))+
+  guides(color = FALSE) +
+  labs(title = "Life expectancy variation over time",
+       x = "Country life expectancy",
+       y = "Frequency",
+       caption = "Source:Gapminder") 
+
+```
+
+
+
+
+```{r}
+gapminder %>% 
+      ggplot(aes(x=continent, y=lifeExp)) +
+  geom_boxplot()+
+stat_summary(fun.y = "mean", geom = "point",color="lightblue",size=3)+
+  theme_classic() +
+  labs(title = "Life expectancy across continents in 2007",
+       x = "",
+       y = "Country life expectancy",
+       caption = "Source:Gapminder") 
+```
+
+
+
+```{r}
+gapminder %>% 
+  mutate(country_israel = ifelse(country=="Israel","Israel","")) %>% 
+ggplot(aes(x=year, y=lifeExp, group=country, color = country_israel,size = country_israel)) +
+    geom_line(alpha=0.5)+
+  scale_colour_manual(name = "", values=c("lightblue","black"))+
+    scale_size_manual(name = "", values=c(0.2,2))+
+    theme_classic()+  
+  labs(title = "Life expectancy increase across countries",
+       x = "",
+       y = "Country life expectancy",
+       caption = "Source:Gapminder") 
+```
+
+
+
+
+```{r}
+gapminder_lifeExp_tab <- gapminder %>%
+    group_by(continent, year) %>%
+    summarise(lifeExp=median(lifeExp))
+
+
+gapminder_lifeExp_tab %>%
+    ggplot(aes(x=year, y=lifeExp, color=continent)) +
+     geom_line(size=1) + 
+     geom_point(size=1.5) +
+    geom_label_repel(data = gapminder_lifeExp_tab %>% filter(year == 2007), aes(label = continent),
+                   nudge_x = 1,
+                   nudge_y = 1) +
+  theme_classic() +
+  guides(color = FALSE) +
+  labs(title = "Life expectancy increase across continents",
+       x = "",
+       y = "Country median life expectancy",
+       caption = "Source:Gapminder") 
+```
+
+<br>
+
+
+
+# GDP per capita
+
+
+```{r}
+gapminder %>% 
+      ggplot(aes(x=factor(year), y=gdpPercap)) +
+  geom_boxplot()+
+stat_summary(fun.y = "mean", geom = "point",color="lightblue",size=3)+
+  theme_classic() +
+  labs(title = "GPD per capaita increase over time",
+       x = "",
+       y = "Country GPD per capaita",
+       caption = "Source:Gapminder") 
+```
+
+You can see that there's an outlier  
+
+
+```{r}
+gapminder %>% 
+  filter(year == 2007) %>% 
+      ggplot(aes(x=gdpPercap)) +
+  geom_histogram(bins=12,fill="lightblue",color="white")+
+  theme_classic() +
+  guides(color = FALSE) +
+  labs(title = "Variation in GDP per capita 2007",
+       x = "Country GPD per capaita",
+       y = "Frequency",
+       caption = "Source:Gapminder") 
+  
+```
+
+```{r}
+gapminder %>% 
+      ggplot(aes(x=gdpPercap)) +
+  geom_histogram(bins=12,fill="lightblue",color="white")+
+  theme_classic() +
+  facet_wrap(vars(year))+
+  xlim(0,60000)+
+  guides(color = FALSE) +
+  labs(title = "Variation in GDP per capita over time",
+       x = "Country GPD per capaita",
+       y = "Frequency",
+       caption = "Source:Gapminder") 
+
+```
+
+
+```{r}
+gapminder %>% 
+  filter(year==2007) %>% 
+      ggplot(aes(x=continent, y=gdpPercap)) +
+  geom_boxplot()+
+stat_summary(fun.y = "mean", geom = "point",color="lightblue",size=3)+
+  theme_classic() +
+  labs(title = "GDP per capita across continents in 2007",
+       x = "",
+       y = "Country GPD per capaita",
+       caption = "Source:Gapminder") 
+```
+
+
+
+
+```{r}
+gapminder %>% 
+  mutate(country_israel = ifelse(country=="Israel","Israel","")) %>% 
+ggplot(aes(x=year, y=gdpPercap, group=country, color = country_israel,size = country_israel)) +
+    geom_line(alpha=0.7)+
+  scale_colour_manual(name = "", values=c("lightblue","black"))+
+    scale_size_manual(name = "", values=c(0.2,2))+
+    theme_classic()+  
+  labs(title = "GPD per capaita increase across countries",
+       x = "",
+       y = "Country GPD per capaita",
+       caption = "Source:Gapminder") 
+```
+
+
+
+
+```{r}
+gapminder_gdpPercap_tab <- gapminder %>%
+    group_by(continent, year) %>%
+    summarise(gdpPercap=median(gdpPercap))
+
+
+gapminder_gdpPercap_tab %>%
+    ggplot(aes(x=year, y=gdpPercap, color=continent)) +
+     geom_line(size=1) + 
+     geom_point(size=1.5) +
+    geom_label_repel(data = gapminder_gdpPercap_tab %>% filter(year == 2007), aes(label = continent),
+                   nudge_x = 1,
+                   nudge_y = 1) +
+  theme_classic() +
+  guides(color = FALSE) +
+  labs(title = "GPD per capaita increase across continents",
+       x = "",
+       y = "Country GPD per capaita",
+       caption = "Source:Gapminder") 
+```
+
+```{r}
+gapminder_gdpPercap_tab <- gapminder %>%
+  filter(country %in% c("Israel","Lebanon","Greece","Turkey","Syria")) %>% 
+    group_by(country, year) %>%
+    summarise(gdpPercap=median(gdpPercap))
+
+
+gapminder_gdpPercap_tab %>%
+    ggplot(aes(x=year, y=gdpPercap, color=country)) +
+     geom_line(size=1) + 
+     geom_point(size=1.5) +
+    geom_label_repel(data = gapminder_gdpPercap_tab %>% filter(year == 2007), aes(label = country),
+                   nudge_x = 1,
+                   nudge_y = 1) +
+  theme_classic() +
+  guides(color = FALSE) +
+  labs(title = "GPD per capaita increase across continents",
+       x = "",
+       y = "Country GPD per capaita",
+       caption = "Source:Gapminder") 
+```
+
+# Link between life expectancy and GDP per capita
+
+
+
+2007
+
+
+```{r}
+gapminder %>% 
+  filter(year==2007) %>% 
+  ggplot(aes(x=gdpPercap,y=lifeExp,color=continent,size=pop))+
+  geom_point()+
+    geom_text(aes(label=country),size=4,hjust=-0.1,vjust=-0.2,color="black",
+            data = gapminder %>% filter(year==2007,country=="Israel"))+
+    theme_classic()+
+    guides(color = FALSE,size=FALSE) +
+  labs(title = "Link between GDP per capita and life expectancy across continents",
+       x = "GDP per capita",
+       y = "Life expectancy",
+       caption = "Source:Gapminder") 
+
+
+```
+
+```{r}
+
+
+p1 <- gapminder %>% 
+  filter(year==2007) %>% 
+  ggplot(aes(x=gdpPercap,y=lifeExp,color=continent,size=pop, text = paste("country:", country)))+
+  geom_point()+
+    geom_text(aes(label=country),size=4,hjust=-0.1,vjust=-0.2,color="black",
+            data = gapminder %>% filter(year==2007,country=="Israel"))+
+    theme_classic()+
+    guides(color = FALSE,size=FALSE) +
+  labs(title = "Link between GDP per capita and life expectancy across continents",
+       x = "GDP per capita",
+       y = "Life expectancy",
+       caption = "Source:Gapminder") 
+
+
+ggplotly(p1)
+```
+
+
+
+```{r}
+gapminder %>% 
+  filter(year==2007) %>% 
+  ggplot(aes(x=gdpPercap,y=lifeExp,color=continent,size=pop))+
+  geom_point()+
+  geom_smooth(aes(group=1))+
+    geom_text(aes(label=country),size=4,hjust=-0.1,vjust=-0.2,color="black",
+            data = gapminder %>% filter(year==2007,country=="Israel"))+
+    theme_classic()+
+    guides(color = FALSE,size=FALSE) +
+  labs(title = "Link between GDP per capita and life expectancy across continents",
+       x = "GDP per capita",
+       y = "Life expectancy",
+       caption = "Source:Gapminder") 
+
+
+```
+
+
+
+
+```{r}
+gapminder %>% 
+  filter(year==2007) %>% 
+  ggplot(aes(x=log(gdpPercap),y=lifeExp,color=continent,size=pop))+
+  geom_point()+
+  geom_smooth(method="lm")+
+    geom_text(aes(label=country),size=4,hjust=-0.1,vjust=-0.2,color="black",
+            data = gapminder %>% filter(year==2007,country=="Israel"))+
+    theme_classic()+
+    guides(color = FALSE,size=FALSE) +
+  labs(title = "Link between GDP per capita and life expectancy across continents",
+       x = "GDP per capita (log)",
+       y = "Life expectancy",
+       caption = "Source:Gapminder") 
+
+
+```
+
+
+
+## Regression model
+
+```{r}
+tmod1 <- lm(lifeExp ~ log(gdpPercap) + year + continent, data=gapminder)
+
+
+tab_model(tmod1)
+
+plot_model(tmod1)
+plot_model(tmod1,type = "std")
+
+plot_model(tmod1,type = "pred")
+
+
+```
+
+```{r}
+tmod2 <- tmod1 %>% update(.~. + continent* (log(gdpPercap) + year))
+
+
+tab_model(tmod1,tmod2)
+
+plot_model(tmod2,type = "pred", terms = c("year","continent"))
+
+```
+
+
+
+```{r}
+anova(tmod1,tmod2)
+```
+
+

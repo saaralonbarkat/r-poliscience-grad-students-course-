@@ -1,0 +1,400 @@
+---
+title: "Data report - Gapminder dataset"
+author: "Saar Alon-Barkat"
+date: "May 2024"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+In this session, we will practice some data exploration.
+
+Technically, we will learn the following verbs (functions) from `dplyr` package (from `tidyverse` metapackage):
+
+-   `filter`
+
+-   `glimpse`
+
+-   `select`
+
+-   `arrange`
+
+-   `summary`
+
+-   `count`
+
+-   `group_by` & `summarise`
+
+Also, we will learn to visualize data and create several basic plots, via `ggplot` package (from `tidyverse` metapackage).
+
+-   Bar plot (`geom_bar`)
+
+-   Histogram (`geom_histogram`)
+
+-   Box-plot (`geom_boxplot`)
+
+-   Scatter plot (`geom_point`)
+
+We will explore the `gapminder` dataset, which includes real-world country-level panel data (1952-2007) for:
+
+-   Life expectancy (`lifeExp`)
+
+-   Population size (`pop`)
+
+-   GDP percapita (`gdpPercap`)
+
+The dataset is available from `gapminder` `r` package. For more information on gapminder see: <https://www.gapminder.org/>
+
+First, we need to call/open the `tidyverse` and `gapminder` libraries
+
+```{r}
+library(tidyverse)
+library(gapminder)
+```
+
+Once we called these packages, we can use the tidyverse functions and the gapminer dataset. Let's try to see if it works -
+
+```{r}
+gapminder %>% 
+  head()
+```
+
+Let's save the gapminder as a dataframe in the working environment. Assign the name gapminder.
+
+```{r}
+gapminder <- gapminder
+
+# alternatively, you can import the data from the csv file in the shared dropbox
+# gapminder <- read_csv("data/gapminder.csv")
+
+```
+
+Let's have a first look at the dataset, using the `glimpse` function. This is highly recommended anytime you import a new dataset.
+
+```{r}
+gapminder %>%
+  glimpse()
+```
+
+<br>
+
+We will create a subset of the data, only data from 2007. We will use `filter`. Assign the name `gapminder_2007`.
+
+```{r}
+gapminder_2007 <- gapminder %>% 
+  filter(year==2007)
+```
+
+<br>
+
+# 1. Exploring a quantiative numeric variable (ratio)
+
+Life expectancy is an example (`lifeExp`). Let's have a look at this variable. Let's use `select` function
+
+```{r}
+gapminder_2007 %>%
+  select(country,
+         lifeExp)
+```
+
+Because these are numeric values, we can sort the data based on this variable. Let's use `arrange` function.
+
+```{r}
+gapminder_2007 %>%
+  select(country,
+         lifeExp) %>%
+  arrange(lifeExp)
+```
+
+The default is ascending. Let's switch to descending by adding `%>% desc()`
+
+```{r}
+gapminder_2007 %>%
+  select(country,
+         lifeExp) %>%
+  arrange(lifeExp %>% desc())
+```
+
+We want to explore the distribution of this variable.
+
+One way to do it, is by looking at measures, like mean, median and quartiles.
+
+```{r}
+gapminder_2007 %>% 
+select(lifeExp) %>% 
+summary()
+
+```
+
+One of the best ways to do this is to visualize. Below, we learn how to use ggplot for this.
+
+Now, try yourself to explore another numeric variable - GDP per capita (`gdpPercap`). \[Use copy, paste, and tweak\]
+
+Arrange countries from lowest to highest GDP per capita (use `arrange`):
+
+```{r}
+
+```
+
+Now, extract the key statistics (use `summary`)
+
+```{r}
+
+```
+
+# 2. Exploring a categorical variable
+
+Now let's have a look at a categorical variable: `continent`
+
+<br>
+
+What do you think happens if you add `arrange`?
+
+```{r}
+gapminder_2007 %>%
+  select(country,
+         continent) %>%
+  arrange(continent)
+
+```
+
+The only thing we can do to explore the distribution of categorical variables is to count them
+
+```{r}
+gapminder_2007 %>% 
+  count(continent) %>% 
+  arrange(n %>% desc())
+```
+
+# 3. Visualising variable distributions via `ggplot2`
+
+## Categorical variable
+
+To visualize the distribution of a categorical variable we will normally use barplot.
+
+```{r}
+gapminder_2007 %>%
+  ggplot(mapping = aes(x = continent)) +
+  geom_bar()
+
+
+
+# Alternatively, you can do this and get the same result: 
+gapminder_2007 %>%
+  count(continent) %>% 
+  ggplot(mapping = aes(x = continent, y=n)) +
+  geom_col()
+
+```
+
+## continuous variable
+
+To visualize the distribution of a continuous variable we will normally use histogram or boxplot.
+
+```{r}
+gapminder_2007 %>%
+  ggplot(mapping=aes(x = lifeExp)) + # Here we need to define the variables to be used 
+  geom_histogram() # now we need to define the type of plot (geometric dimension)
+
+gapminder_2007 %>%
+ggplot(aes(lifeExp))+
+  geom_histogram(binwidth = 5)
+
+```
+
+Can you imagine where are Q1,median, mean and Q3? A best way to visualize it is using a "boxplot".
+
+<br>
+
+```{r}
+gapminder_2007 %>%
+  ggplot(mapping = aes(y = lifeExp)) +
+  geom_boxplot()
+```
+
+Now, try to explore and visualize GDP per capita using histogram and boxplot (again, use copy, paste, and tweak)
+
+```{r}
+
+```
+
+# 4. Exploring the relations between two variables
+
+The best way to explore the link between two variables is to visualize. Again, we will use different plots (`geom_`) depending on the type of the data.
+
+## Relations between quantitative variable and categorical variable can be visualized via boxplot.
+
+e.g. - let's compare the levels of life expectancy across continents.
+
+```{r}
+gapminder_2007 %>%
+  ggplot(mapping = aes(x = continent, y = lifeExp)) +
+  geom_boxplot()
+
+
+# Tip: you can also sort categories
+gapminder_2007 %>% 
+  ggplot(aes(x=reorder(continent,lifeExp, FUN = median),y=lifeExp))+
+  geom_boxplot()
+```
+
+Very often, people use points or bars to compare a quantiative variable across groups. But boxplot is better because is can also show you differences in distributions.
+
+```{r}
+gapminder_2007 %>%
+  ggplot(mapping = aes(x = continent, y = lifeExp)) +
+stat_summary(fun.y = "mean", geom = "point")
+
+```
+
+Or - use both:
+
+```{r}
+gapminder_2007 %>%
+  ggplot(mapping = aes(x = continent, y = lifeExp)) +
+    geom_boxplot()+
+stat_summary(fun.y = "mean", geom = "point",color="red",size=2)
+
+```
+
+If we want to extract the means and medians for each group - we can use `group_by` and `summarize`
+
+```{r}
+gapminder_2007 %>%
+  group_by(continent) %>%
+  summarise(mean_life_expectancy = lifeExp %>% mean(),
+            median_life_expectancy = lifeExp %>% median())
+```
+
+For self practice - try to do the same with GDP per capita (i.e. compare GDP across continents)
+
+```{r}
+
+```
+
+## Relations between two continuous variables
+
+The best way to visualize the relation between two continuous variables is a scatterplot.
+
+```{r}
+gapminder_2007 %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point()
+```
+
+We may want to add a trend/regression line
+
+```{r}
+gapminder_2007 %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point()+
+  geom_smooth()
+
+
+
+#To change the default and use a linear trend/regression - add `method="lm"`
+gapminder_2007 %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+```
+
+# 5. Adding more dimensions
+
+Thus far, we explored the relations between two variables. But very often, we want to add more dimensions - e.g. exploring the relations across different groups/clusters or over time. This can be important to account for potential confounding variables, or to explore interactions.
+
+Again - I would recommned exploring this by visualizing the data. There are several easy ways you can add more dimensions to the plot:
+
+For categorical variables: - playing with colors and/or shapes. - Using "faceting".
+
+For continuous variables: - Playing with size.
+
+Let's see a few examples:
+
+We want to explore the relations between well-being and life expectancy across continents. To do so we can use different colors for each continent:
+
+```{r}
+gapminder_2007 %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp, color=continent)) + 
+# Try to replace color with `shape`
+  geom_point()
+
+
+
+```
+
+Or use faceting (`facet_wrap`)
+
+```{r}
+gapminder_2007 %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point()+
+  facet_wrap(vars(continent))
+```
+
+Now, let's add another continuous variable/dimension. Say we want to account for country population size, in addition. We can also play with the point size and shape. e.g. use size to represent population size.
+
+```{r}
+gapminder_2007 %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp, color=continent, size = pop)) +
+  geom_point()
+```
+
+And now, let's add another categorical variable/dimension. Say we want to account for year, in addition. Let's return to the full `gapminder` data for this, and use `facet_wrap`.
+
+```{r}
+gapminder %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp, color=continent, size = pop)) +
+  geom_point() +
+  facet_wrap(vars(year))
+```
+
+```{r}
+gapminder %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  facet_grid(continent~year)
+
+```
+
+# 6. Exploring a variable over time
+
+To visualize a continuous variable over time, we will normally use a line plot.
+
+Let's use simple example - first we will create an aggregated table summarizing the total population in all countries together for each year. We will name this table `pop_sum`
+
+```{r}
+pop_sum <- gapminder %>%
+  group_by(year) %>% 
+  summarise(pop=sum(pop)) 
+
+pop_sum
+```
+
+```{r}
+pop_sum %>% 
+  ggplot(aes(x = year, y = pop)) +
+  geom_point()+
+  geom_line()
+```
+
+But - accounting for variation is always important. e.g. - life expectancy over time, accross countries.
+
+```{r}
+gapminder %>%
+  ggplot(mapping = aes(x = factor(year), y = lifeExp)) +
+    geom_boxplot()+
+stat_summary(fun.y = "mean", geom = "point",color="red",size=2)
+
+```
+
+For more inspiration for great (effective) visualizations in R check the R Graph Gallery: <https://r-graph-gallery.com/>
+
+There are also plenty of R packages for data exploration solutions. Over time - you will find your favorites.
