@@ -1,8 +1,8 @@
 ---
 title: "A very basic introduction to R"
-subtitle: "R for Political Science Grad Students course 2021-22"
+subtitle: "R for Political Science Grad Students course 2024-25"
 author: "Saar Alon-Barkat"
-date: "March 2023"
+date: "May 2025"
 format:
   html:
     self-contained: true
@@ -139,7 +139,7 @@ One of the great things about R is that you can work with endless data frames (a
 For examples, let's import another data frame. We will import now a CSV data file from our shared dropbox library.
 
 ```{r}
-gapminder = read.csv("https://www.dropbox.com/s/kp256vrk0hhcc1h/gapminder.csv?dl=1")
+gapminder = read.csv("https://raw.githubusercontent.com/saaralonbarkat/r-poliscience-grad-students-course-/refs/heads/main/data/gapminder/gapminder.csv")
 
 
 head(gapminder)
@@ -151,7 +151,7 @@ You will later learn how to import data files from your computer. Noteworthy tha
 
 R has operators. We will get to know some of them.
 
-'==' is "equal"
+'==' means "equal"
 
 ```{r}
 1+2==2+1
@@ -160,13 +160,13 @@ my_first_dataframe$my_second_vector=="a"
 
 ```
 
-'!=' is "not equal"
+'!=' means "not equal"
 
 ```{r}
 3+2!=2+1
 ```
 
-'\|' is "or"
+'\|' means "or"
 
 ```{r}
 my_first_dataframe[1,2]=="b"|my_first_dataframe[1,2]=="c"
@@ -240,13 +240,11 @@ Tidyverse is a set of packages that provide solutions to all of the stages in th
 
 It uses a unified simple, intuitive human language where functions are verbs.
 
-For example:
+For example, instead of `gapminder_2007 <- gapminder[gapminder$year==2007,]` - you can write:
 
 ```{r}
 gapminder %>% 
-  select(country,
-         lifeExp) %>% 
-  head()
+  filter(year==2007)
 ```
 
 ```{r}
@@ -261,15 +259,16 @@ gapminder_2007 %>%
   head()
 ```
 
-The %\>% operator is called "pipe". It is an important element in Tidyverse and it is extremely useful. It makes tidyverse code very elegant - intuitive and easy to read, understand and learn.
+The `%\>%` operator is called "pipe". It is an important element in Tidyverse and it is extremely useful. It makes tidyverse code very elegant - intuitive and easy to read, understand and learn.
+Last year, R also implemented a "base pipe" that can also work: `|>`. So you can either use `%>%` or `|>`
+
 
 ```{r}
 gapminder %>% 
   filter(year==2007) %>% 
   select(continent,country,lifeExp) %>% 
-  arrange(lifeExp)%>% 
-  head()
+  arrange(lifeExp)
 
 ```
 
-We will often use tidyverse in the course. We recommend you to get used to working with it (but you prefer to use base R that's also ok). In the end you will develop your own habits and style.
+We will often use tidyverse in the course. We recommend you to get used to working with it (but you prefer to use base R that's also ok). In the end you will develop your own habits and coding style.

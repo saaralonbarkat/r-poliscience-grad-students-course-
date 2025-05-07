@@ -1,7 +1,7 @@
 #### 
 ##A very basic introduction to R
 ####
-##R for Political Science Grad Students course 2022-23
+##R for Political Science Grad Students course 2024-25
 ####
 
 
@@ -101,8 +101,7 @@ my_first_dataframe[1:2,c(1,3)]
 #One of the great things about R is that you can work with endless data frames (and other objects) at the same time (by comparison with other software).
 
 #For examples, let's import another data frame. We will import now a CSV data file from our shared dropbox library. 
-gapminder = read.csv("https://www.dropbox.com/s/kp256vrk0hhcc1h/gapminder.csv?dl=1")
-
+gapminder = read.csv("https://raw.githubusercontent.com/saaralonbarkat/r-poliscience-grad-students-course-/refs/heads/main/data/gapminder/gapminder.csv")
 
 head(gapminder)
 
@@ -112,16 +111,16 @@ head(gapminder)
 
 
 # R has operators. We will get to know some of them. 
-#== is "equal"
+#== means "equal"
 1+2==2+1
 3+2==2+1
 my_first_dataframe$my_second_vector=="a"
 
 
-#!= is "not equal"
+#!= means "not equal"
 3+2!=2+1
 
-#| is "or"
+#| means "or"
 my_first_dataframe[1,2]=="b"|my_first_dataframe[1,2]=="c"
 #You can also use the %in% operator:
 my_first_dataframe[1,2] %in% c("b","c")
@@ -132,9 +131,7 @@ my_first_dataframe$my_fourth_vector >= 0
 
 
 #Let's use the `==` operator to filter the data (next meeting we will learn other ways to do it):
-
 gapminder_2007 <- gapminder[gapminder$year==2007,]
-
 
 
 #R has multiple built-in functions. Here are some examples:
@@ -149,23 +146,6 @@ cor.test(gapminder_2007$gdpPercap,gapminder_2007$lifeExp) # Correlation coeffici
 
 
 model1 <- lm(lifeExp~gdpPercap,data=gapminder_2007) # Linear OLS regression model
-summary(model1)
-
-# Notice that `summary` and `plot` are versatile functions. They do different things depending on the type of data. 
-
-
-
-
-# R has multiple built-in functions
-round(1.168)
-mean(my_first_dataframe$my_fourth_vector) # Mean of a variable
-table(my_first_dataframe$my_second_vector) # Frequency table
-summary(my_first_dataframe) 
-boxplot(my_first_dataframe$my_fourth_vector)
-plot(my_first_dataframe$my_fourth_vector,my_first_dataframe$my_fifth_vector)
-cor.test(x=my_fifth_vector,y=my_fourth_vector,data=my_first_dataframe) # Correlation coefficient test
-
-model1 <- lm(my_fourth_vector~my_fifth_vector,data=my_first_dataframe) # Linear OLS regression model
 summary(model1)
 
 # Notice that `summary` and `plot` are versatile functions. They do different things depending on the type of data. 
@@ -187,7 +167,7 @@ myfunction(2,4)
 # endless extensions that you can download (like apps in your smartphone). 
 # These extensions are called "packages" or "libraries".
 
-# We will work with the very useful set of packages in "tidyverse".
+# We will work with the very useful set of packages in `tidyverse`.
 # In the first time you are using a package you need to download and install it
 # with `install.packages`
 # install.packages("tidyverse")
@@ -200,23 +180,12 @@ library(tidyverse)
 # the workflow (import, tidy, transform, visualize, model, communicate).
 # It uses a unified simple, intuitive human language where functions are verbs. 
 
-#For example:
-
-gapminder %>% 
-  select(country,
-         lifeExp) %>% 
-  head() %>%
-  summary()
-
-
+#For example, instead of `gapminder_2007 <- gapminder[gapminder$year==2007,]` - you can write:
 gapminder %>% 
   filter(year==2007)
 
-gapminder_2007 %>% 
-  arrange(lifeExp)
-
-#The %\>% operator is called "pipe". It is an important element in Tidyverse and it is extremely useful. It makes tidyverse code very elegant - intuitive and easy to read, understand and learn.
-
+#The `%\>%` operator is called "pipe". It is an important element in Tidyverse and it is extremely useful. It makes tidyverse code very elegant - intuitive and easy to read, understand and learn.
+#Last year, R also implemented a "base pipe" that can also work: `|>`. So you can either use `%>%` or `|>`
 
 gapminder %>% 
   filter(year==2007) %>% 
@@ -224,6 +193,11 @@ gapminder %>%
   arrange(lifeExp)
 
 
+# We will often use tidyverse in the course. 
+# We recommend you to get used to working with it (but you prefer to use base R that's also ok). 
+# In the end you will develop your own habits and coding style.
+
+
 # Again, this file is an R script. Scripts are great if you just want R to run
 # a list of commands. But there's another very effective way to work with R, 
-# with RMarkdown files. 
+# with Quarto files (previously called RMarkdown). 
