@@ -1,7 +1,7 @@
 ---
 title: "Data report - Gapminder dataset"
 author: "Saar Alon-Barkat"
-date: "May 2024"
+date: "May 2025"
 format:
   html:
     self-contained: true
