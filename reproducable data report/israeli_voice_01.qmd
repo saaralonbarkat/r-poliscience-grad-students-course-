@@ -1,0 +1,192 @@
+---
+title: "Israeli Voice Index"
+author: "Saar Alon-Barkat"
+date: "May 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+
+Last update: `r Sys.time()`
+
+
+
+This is a data report, based on the Israeli Voice Index by the Israeli Democracy Institute. 
+https://www.idi.org.il/centers/1123/26883
+
+Research hypothesis: 
+
+H1: Women are more likely to prioritize hostage release over fighting against Hamas. 
+
+
+
+
+```{r}
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(sjPlot)
+library(haven)
+library(labelled)
+library(codebook)
+library(janitor)
+```
+
+# Import data
+```{r}
+israeli_voice_march_25 <- read_sav("reproducable data report/data/israeli_voice_march_25.sav") %>% janitor::clean_names()
+```
+
+
+
+# Building variables
+```{r}
+df <- israeli_voice_march_25 %>% 
+  mutate(goal_priority = q5,
+         priority_hostage = ifelse(q5==2,1,0), # coded 1 if prioritizes hostage release
+         female = ifelse(q23==2,1,0),
+         age_group=q25,
+         left_right = q26 %>% na_if(8),
+         political_camps = q27 %>% na_if(4),
+         party_vote = q29,
+         income_jewish = q28 %>% na_if(6),
+         income_arab = q30 %>% na_if(6),
+         district_jewish = q33,
+         arab = ifelse(q32==2,1,0)) %>% 
+  dplyr::select(goal_priority:arab)
+
+df_jewish <- df %>% filter(arab==0)
+```
+
+
+
+```{r}
+df %>% glimpse()
+```
+
+
+```{r}
+df %>% labelled::to_factor() %>% 
+  gtsummary::tbl_summary()
+```
+
+```{r}
+
+(0.73/(1-0.73)) / 
+(0.65/(1-0.65))
+
+```
+
+
+```{r}
+df %>% labelled::to_factor() %>% 
+  gtsummary::tbl_summary(by=female)
+```
+
+
+
+# Correlations
+
+```{r}
+cor.test(df$priority_hostage,df$left_right)
+```
+
+```{r}
+t.test(priority_hostage~female,data=df)
+```
+```{r}
+chisq.test(df$female,df$priority_hostage)
+```
+
+
+# Regression models
+
+## Linear models
+
+```{r}
+df_1 <- df %>% remove_labels()
+
+model_1 <- lm(priority_hostage~factor(female),data=df_1)
+model_2 <- lm(priority_hostage~factor(female) +
+                age_group+
+                left_right+
+                arab,data=df_1)
+model_3 <- lm(priority_hostage ~ age_group*female +
+                left_right+
+                arab,data=df_1)
+model_4 <- lm(priority_hostage ~ female*left_right +
+                age_group+
+                arab,data=df_1)
+
+
+
+tab_model(
+  model_1,model_2,model_3,model_4,
+  show.ci = F,
+  show.se = T,
+  show.p = TRUE,
+  p.style = "stars",
+  collapse.se = T,
+  order.terms = c(2,1),
+  digits = 2
+)
+
+```
+
+```{r}
+plot_model(model_4,type="int")
+```
+
+```{r}
+anova(model_2,model_3)
+```
+
+
+
+
+## Logit models
+
+```{r}
+df_1 <- df %>% remove_labels()
+
+model_1 <- glm(priority_hostage~factor(female),data=df_1,family = "binomial")
+
+model_2 <- model_1 %>% update(.~.+age_group+
+                left_right)
+model_3 <- model_2 %>% update(. ~ . + age_group*female)
+
+model_4 <- model_2 %>% update(.~.+female*left_right)
+
+
+
+
+tab_model(
+  model_1,model_2,model_3,model_4,
+  show.ci = F,
+  show.se = T,
+  show.p = TRUE,
+  p.style = "stars",
+  collapse.se = T,
+  order.terms = c(2,1),
+  digits = 2
+)
+
+```
+
+```{r}
+plot_model(model_4,type="int")
+```
+
+Tentative conclusions: 
+
+We find support for our hypothesis. Israeli women are more likely to prioritize hostage release over fighting Hamas, controlling for age and political ideology. Our models predict that women's support for hostage release were higher by 11 CI[4.3,18.5] percentage points. 
+
+
+

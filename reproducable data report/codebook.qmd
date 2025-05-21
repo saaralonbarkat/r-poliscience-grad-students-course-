@@ -1,0 +1,40 @@
+---
+title: "Israeli Voice Index - codebook"
+author: "Saar Alon-Barkat"
+date: "May 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+
+
+
+
+```{r}
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(sjPlot)
+library(haven)
+library(labelled)
+library(codebook)
+library(janitor)
+```
+
+Import data
+```{r}
+israeli_voice_march_25 <- read_sav("reproducable data report/data/israeli_voice_march_25.sav") %>% janitor::clean_names()
+```
+
+
+```{r}
+israeli_voice_march_25 %>% codebook()
+```
+
