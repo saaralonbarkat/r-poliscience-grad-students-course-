@@ -1,0 +1,297 @@
+---
+title: "Gapminder Modern Dataset (1952–2022)"
+subtitle: "Exploring global trends in population, life expectancy, GDP, and CO₂"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 5.5
+    df-print: kable
+execute:
+  warning: false
+  message: false
+---
+
+## Overview
+
+This report explores the **Gapminder Modern** dataset, which combines four indicators for up to 195 countries across 15 five-year snapshots from 1952 to 2022:
+
+| Indicator | Description |
+|-----------|-------------|
+| `lifeExp` | Life expectancy at birth (years) |
+| `pop` | Total population |
+| `gdpPercap` | GDP per capita (inflation-adjusted USD) |
+| `co2Percap` | CO₂ consumption per capita (tonnes) |
+
+```{r}
+#| label: setup
+library(tidyverse)
+library(scales)
+
+gap <- read_csv("gapminder_modern_1952_2022.csv") |>
+  filter(!is.na(continent))   # drop the 1 unmatched row
+
+continent_colours <- c(
+  Africa   = "#E69F00",
+  Americas = "#56B4E9",
+  Asia     = "#009E73",
+  Europe   = "#CC79A7",
+  Oceania  = "#F0E442"
+)
+```
+
+## Dataset at a Glance
+
+```{r}
+#| label: tbl-overview
+gap |>
+  summarise(
+    Countries  = n_distinct(country),
+    Continents = n_distinct(continent),
+    Years      = n_distinct(year),
+    `Year range` = paste(min(year), "–", max(year)),
+    Rows       = n(),
+    `Missing lifeExp (%)` = round(mean(is.na(lifeExp)) * 100, 1),
+    `Missing GDP (%)` = round(mean(is.na(gdpPercap)) * 100, 1),
+    `Missing CO₂ (%)` = round(mean(is.na(co2Percap)) * 100, 1)
+  )
+```
+
+```{r}
+#| label: tbl-continent-counts
+gap |>
+  distinct(country, continent) |>
+  count(continent, name = "Countries") |>
+  arrange(desc(Countries))
+```
+
+---
+
+## Life Expectancy
+
+### Global Trend
+
+Life expectancy has risen dramatically in every continent. The shaded ribbon shows the min–max country range; the line shows the population-weighted mean.
+
+```{r}
+#| label: fig-lifeexp-trend
+#| fig-cap: "Population-weighted mean life expectancy by continent, 1952–2022"
+
+gap |>
+  filter(!is.na(lifeExp), !is.na(pop)) |>
+  summarise(
+    mean_le  = weighted.mean(lifeExp, pop),
+    min_le   = min(lifeExp),
+    max_le   = max(lifeExp),
+    .by = c(continent, year)
+  ) |>
+  ggplot(aes(year, mean_le, colour = continent, fill = continent)) +
+  geom_ribbon(aes(ymin = min_le, ymax = max_le), alpha = 0.12, colour = NA) +
+  geom_line(linewidth = 1) +
+  scale_colour_manual(values = continent_colours) +
+  scale_fill_manual(values = continent_colours) +
+  scale_x_continuous(breaks = seq(1952, 2022, 10)) +
+  labs(x = NULL, y = "Life expectancy (years)",
+       colour = NULL, fill = NULL)
+```
+
+### Distribution in 2022
+
+```{r}
+#| label: fig-lifeexp-2022
+#| fig-cap: "Distribution of life expectancy by continent in 2022"
+
+gap |>
+  filter(year == 2022, !is.na(lifeExp)) |>
+  ggplot(aes(lifeExp, fct_reorder(continent, lifeExp, median),
+             colour = continent, fill = continent)) +
+  ggridges::geom_density_ridges(alpha = 0.4, scale = 0.9) +
+  scale_colour_manual(values = continent_colours) +
+  scale_fill_manual(values = continent_colours) +
+  labs(x = "Life expectancy (years)", y = NULL) +
+  theme(legend.position = "none")
+```
+
+### Top & Bottom 10 Countries (2022)
+
+```{r}
+#| label: tbl-lifeexp-extremes
+le_2022 <- gap |>
+  filter(year == 2022, !is.na(lifeExp)) |>
+  select(country, continent, lifeExp) |>
+  arrange(desc(lifeExp))
+
+bind_rows(
+  slice_head(le_2022, n = 10) |> mutate(rank = "Top 10"),
+  slice_tail(le_2022, n = 10) |> mutate(rank = "Bottom 10")
+) |>
+  select(rank, country, continent, `Life expectancy` = lifeExp)
+```
+
+---
+
+## GDP per Capita
+
+### Median GDP Trend by Continent
+
+```{r}
+#| label: fig-gdp-trend
+#| fig-cap: "Median GDP per capita by continent, 1952–2022 (log scale)"
+
+gap |>
+  filter(!is.na(gdpPercap)) |>
+  summarise(median_gdp = median(gdpPercap), .by = c(continent, year)) |>
+  ggplot(aes(year, median_gdp, colour = continent)) +
+  geom_line(linewidth = 1) +
+  scale_y_log10(labels = scales::dollar_format()) +
+  scale_colour_manual(values = continent_colours) +
+  scale_x_continuous(breaks = seq(1952, 2022, 10)) +
+  labs(x = NULL, y = "Median GDP per capita (USD, log scale)", colour = NULL)
+```
+
+### GDP Distribution in 2022
+
+```{r}
+#| label: fig-gdp-violin
+#| fig-cap: "GDP per capita distribution by continent in 2022 (log scale)"
+
+gap |>
+  filter(year == 2022, !is.na(gdpPercap)) |>
+  ggplot(aes(fct_reorder(continent, gdpPercap, median),
+             gdpPercap, fill = continent)) +
+  geom_violin(alpha = 0.6, draw_quantiles = 0.5) +
+  geom_jitter(width = 0.15, size = 1.5, alpha = 0.5) +
+  scale_y_log10(labels = scales::dollar_format()) +
+  scale_fill_manual(values = continent_colours) +
+  labs(x = NULL, y = "GDP per capita (USD, log scale)") +
+  theme(legend.position = "none")
+```
+
+---
+
+## CO₂ per Capita
+
+### Trend Over Time
+
+```{r}
+#| label: fig-co2-trend
+#| fig-cap: "Population-weighted mean CO₂ per capita by continent, 1952–2022"
+
+gap |>
+  filter(!is.na(co2Percap), !is.na(pop)) |>
+  summarise(
+    mean_co2 = weighted.mean(co2Percap, pop),
+    .by = c(continent, year)
+  ) |>
+  ggplot(aes(year, mean_co2, colour = continent)) +
+  geom_line(linewidth = 1) +
+  scale_colour_manual(values = continent_colours) +
+  scale_x_continuous(breaks = seq(1952, 2022, 10)) +
+  labs(x = NULL, y = "CO₂ per capita (tonnes)", colour = NULL)
+```
+
+### Top Emitters in 2022
+
+```{r}
+#| label: tbl-co2-top
+gap |>
+  filter(year == 2022, !is.na(co2Percap)) |>
+  slice_max(co2Percap, n = 15) |>
+  select(Country = country, Continent = continent,
+         `CO₂ per capita (t)` = co2Percap,
+         `Population` = pop) |>
+  mutate(`Population` = scales::number(Population, big.mark = ",", accuracy = 1))
+```
+
+---
+
+## The Gapminder View: Wealth vs. Health
+
+A bubble chart replicating the classic Gapminder "wealth vs. health" view for selected years.
+
+```{r}
+#| label: fig-bubble
+#| fig-cap: "GDP per capita vs. life expectancy; bubble size = population"
+#| fig-height: 7
+
+gap |>
+  filter(year %in% c(1952, 1977, 2002, 2022),
+         !is.na(gdpPercap), !is.na(lifeExp), !is.na(pop)) |>
+  ggplot(aes(gdpPercap, lifeExp,
+             size = pop, colour = continent)) +
+  geom_point(alpha = 0.55) +
+  scale_x_log10(labels = scales::dollar_format()) +
+  scale_size_area(max_size = 18,
+                  labels = scales::label_number(big.mark = ",")) +
+  scale_colour_manual(values = continent_colours) +
+  facet_wrap(~year, ncol = 2) +
+  labs(x = "GDP per capita (USD, log scale)",
+       y = "Life expectancy (years)",
+       colour = NULL, size = "Population") +
+  theme(legend.position = "bottom")
+```
+
+---
+
+## CO₂ vs. GDP
+
+Wealthier countries tend to emit more CO₂, but the relationship has shifted over time.
+
+```{r}
+#| label: fig-co2-gdp
+#| fig-cap: "CO₂ per capita vs. GDP per capita for 2022"
+
+gap |>
+  filter(year == 2022, !is.na(gdpPercap), !is.na(co2Percap)) |>
+  ggplot(aes(gdpPercap, co2Percap,
+             size = pop, colour = continent,
+             label = country)) +
+  geom_point(alpha = 0.6) +
+  ggrepel::geom_text_repel(
+    data = \(d) slice_max(d, co2Percap, n = 8),
+    size = 3, max.overlaps = 20
+  ) +
+  scale_x_log10(labels = scales::dollar_format()) +
+  scale_size_area(max_size = 16, guide = "none") +
+  scale_colour_manual(values = continent_colours) +
+  labs(x = "GDP per capita (USD, log scale)",
+       y = "CO₂ per capita (tonnes)",
+       colour = NULL)
+```
+
+---
+
+## Summary Statistics (2022)
+
+```{r}
+#| label: tbl-summary-2022
+gap |>
+  filter(year == 2022) |>
+  summarise(
+    across(c(lifeExp, gdpPercap, co2Percap),
+           list(median = \(x) median(x, na.rm = TRUE),
+                mean   = \(x) mean(x, na.rm = TRUE),
+                sd     = \(x) sd(x, na.rm = TRUE)),
+           .names = "{.col}__{.fn}"),
+    .by = continent
+  ) |>
+  pivot_longer(-continent, names_to = c("Indicator", "Stat"),
+               names_sep = "__") |>
+  pivot_wider(names_from = Stat, values_from = value) |>
+  arrange(Indicator, continent) |>
+  mutate(across(where(is.numeric), \(x) round(x, 1)))
+```
+
+---
+
+## Data Notes
+
+- Source: [Gapminder](https://www.gapminder.org/data/) (indicators: `lex`, `pop`, `gdp_pcap`, `co2_pcap_cons`).
+- Years: every 5 years from 1952 to 2022 (15 snapshots).
+- One unmatched ISO3 code with no country name was excluded (~15 rows).
+- Small states (Liechtenstein, Monaco, San Marino) have partial data for some indicators.
+- CO₂ values represent *consumption-based* emissions per capita.
