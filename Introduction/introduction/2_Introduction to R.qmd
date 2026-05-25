@@ -1,8 +1,8 @@
 ---
 title: "A very basic introduction to R"
-subtitle: "R for Political Science Grad Students course 2024-25"
+subtitle: "R for Political Science Grad Students course 2025-26"
 author: "Saar Alon-Barkat"
-date: "May 2025"
+date: "May 2026"
 format:
   html:
     self-contained: true
