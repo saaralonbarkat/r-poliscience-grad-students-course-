@@ -1,6 +1,6 @@
 Files for course:
 
-Advanced Research Methods in Political Science (205.5538); Semester B 2024-5
+Advanced Research Methods in Political Science (205.5538); Semester B 2025-6
 
 University of Haifa
 
